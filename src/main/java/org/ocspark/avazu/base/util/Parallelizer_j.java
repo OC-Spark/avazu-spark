@@ -1,5 +1,5 @@
 package org.ocspark.avazu.base.util;
 
-public class GenData {
+public class Parallelizer_j {
 
 }

@@ -1,5 +1,5 @@
 package org.ocspark.avazu.base.util;
 
-public class Common {
+public class GenData_j {
 
 }

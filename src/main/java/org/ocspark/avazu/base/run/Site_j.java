@@ -1,5 +1,5 @@
 package org.ocspark.avazu.base.run;
 
-public class App {
+public class Site_j {
 
 }

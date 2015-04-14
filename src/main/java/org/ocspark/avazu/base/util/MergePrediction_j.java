@@ -1,5 +1,5 @@
 package org.ocspark.avazu.base.util;
 
-public class Parallelizer {
+public class MergePrediction_j {
 
 }

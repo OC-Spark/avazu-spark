@@ -1,5 +1,5 @@
 package org.ocspark.avazu.base.util;
 
-public class MergePrediction {
+public class PicklePrediction_j {
 
 }
