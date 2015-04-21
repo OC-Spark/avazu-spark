@@ -3,3 +3,4 @@
 .project
 target/
 .cache
+src/main/resources/core-site.xml
