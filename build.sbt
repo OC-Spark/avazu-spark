@@ -5,7 +5,7 @@ name := "spark-examples"
 lazy val commonSettings = Seq(
   version := "1.0",
   organization := "com.jcalc",
-  scalaVersion := "2.10.4"
+  scalaVersion := "2.10.5"
 )
 
 val sparkVersion = "1.2.0"

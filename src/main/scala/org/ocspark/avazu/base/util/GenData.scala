@@ -33,9 +33,11 @@ object GenData {
   val user_count = 17
   val smooth_user_hour_count = 18
   val user_click_history = 19
-  val newFieldMap = Map("id" -> 0, "click" -> 1, "hour" -> 2, "banner_pos" -> 3, "device_id" -> 4, "device_ip" -> 5, "device_model" -> 6, "device_conn_type" -> 7, "C14" -> 8, "C17" -> 9, "C20" -> 10, "C21" -> 11)
+  val newFieldMap = Map("id" -> 0, "click" -> 1, "hour" -> 2, "banner_pos" -> 3, "device_id" -> 4, "device_ip" -> 5, "device_model" -> 6, "device_conn_type" -> 7, "C14" -> 8, "C17" -> 9, 
+      "C20" -> 10, "C21" -> 11, "pub_id" -> 12, "pub_domain" -> 13, "pub_category" -> 14, "device_id_count" -> 15, "device_ip_count" -> 16, "user_count" -> 17, 
+      "smooth_user_hour_count" -> 18, "user_click_history" -> 19)
 
-  val hdfsHost = "devserver2.office.onescreeninc.com:8020"
+//  val hdfsHost = "devserver2.office.onescreeninc.com:8020"
   val FIELDS = Array("id", "click", "hour", "banner_pos", "device_id", "device_ip", "device_model", "device_conn_type", "C14", "C17", "C20", "C21") // qw fields
   val NEW_FIELDS = FIELDS ++ Array("pub_id", "pub_domain", "pub_category", "device_id_count", "device_ip_count", "user_count", "smooth_user_hour_count", "user_click_history")
 
@@ -43,10 +45,10 @@ object GenData {
 
   val history = scala.collection.mutable.Map[String, scala.collection.mutable.Map[String, String]]()
   
-  val conf = new Configuration()
-  val hdfsCoreSitePath = new Path("core-site.xml")
-  conf.addResource(hdfsCoreSitePath)		// comment out when submitting to spark cluster
-  val fs = FileSystem.get(conf)
+//  val conf = new Configuration()
+//  val hdfsCoreSitePath = new Path("core-site.xml")
+//  conf.addResource(hdfsCoreSitePath)		// comment out when submitting to spark cluster
+//  val fs = FileSystem.get(conf)
 
   def main(args: Array[String]): Unit = {
     val trSrcPath = args(0)
@@ -60,8 +62,16 @@ object GenData {
     .setMaster("local[4]")		// comment out when submitting to spark cluster
 
     val sc = new SparkContext(sparkConf)
+    
+    run(trSrcPath, vaSrcPath, trAppDstPath, vaAppDstPath, trSiteDstPath, vaSiteDstPath, sc)
+    
+  }
+  
+  def run(trSrcPath : String, vaSrcPath : String, trAppDstPath : String, vaAppDstPath : String, trSiteDstPath : String, vaSiteDstPath : String, sc : SparkContext){
 
-    val trSrcLines = sc.textFile("hdfs://" + hdfsHost + "/" + trSrcPath, 4).filter(line => !isHeader(line))
+    val trRawSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + "/" + trSrcPath, 4)
+    val trSrcLines = Common.dropHeader(trRawSrcLines)
+//    .filter(line => !isHeader(line))
     .map { 
       line => 
         val row = line.split(",")
@@ -74,7 +84,9 @@ object GenData {
     val tr_user_count = userCount(trSrcLines)
     val tr_user_hour_count = userHourCount(trSrcLines)
 
-    val vaSrcLines = sc.textFile("hdfs://" + hdfsHost + "/" + vaSrcPath, 4).filter(line => !isHeader(line))
+    val vaRawSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + "/" + vaSrcPath, 4)
+    val vaSrcLines = Common.dropHeader(vaRawSrcLines)
+//    .filter(line => !isHeader(line))
     .map { 
       line => 
         val row = line.split(",")
@@ -265,21 +277,11 @@ object GenData {
 
     println("number site rows = " + siteRows.count)
     
-    writeOut(appRows.collect, dst_app_path)
+    Common.writeOut(NEW_FIELDS, appRows.collect, dst_app_path)
 
-    writeOut(siteRows.collect, dst_site_path)
+    Common.writeOut(NEW_FIELDS, siteRows.collect, dst_site_path)
   }
 
-  def writeOut(newRows: Array[String], dst_app_path : String) {
-	  val path = new Path("/" + dst_app_path)
-	  val os = fs.create(path)
-	  os.write((NEW_FIELDS.mkString(",") + "\n").getBytes())
-	  
-	  for (row <- newRows){
-	    os.write((row.mkString("") + "\n").getBytes())
-	  }
-	  os.close()
-  }
 
 }
 

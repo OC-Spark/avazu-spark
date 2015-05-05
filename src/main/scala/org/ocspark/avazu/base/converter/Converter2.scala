@@ -1,81 +1,120 @@
 package org.ocspark.avazu.base.converter
 
-
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import java.util.Properties
+import scala.collection.mutable.ArrayBuffer
+import scala.annotation.meta.field
+import org.apache.spark.SparkContext
+import org.ocspark.avazu.base.util.GenData
+import org.apache.spark.SparkConf
+import org.apache.hadoop.fs.Path
+import org.apache.spark.mllib.feature.HashingTF
 
 object Converter2 {
-    val (hdfsHost) =
-    try {
-      val prop = new Properties()
-      val is = this.getClass().getClassLoader()
-        .getResourceAsStream("config.properties");
-      prop.load(is)
 
-      (
-        prop.getProperty("hdfs.host")
-        )
-    } catch {
-      case e: Exception =>
-        e.printStackTrace()
-        sys.exit(1)
-    }
+  val NR_BINS = 1000000
+  val tf = new HashingTF(NR_BINS)
+
+  val fields = Array("pub_id", "pub_domain", "pub_category", "banner_pos", "device_model", "device_conn_type", "C14", "C17", "C20", "C21")
+  val fieldsMap = Map[String, Int]("pub_id" -> 0, "pub_domain" -> 1, "pub_category" -> 2, "banner_pos" -> 3, "device_model" -> 4, "device_conn_type" -> 5, "C14" -> 6, "C17" -> 7, "C20" -> 8, "C21" -> 9)
+  val pub_id = 0
+  val pub_domain = 1
+  val pub_category = 2
+  val banner_pos = 3
+  val device_model = 4
+  val device_conn_type = 5
+  val C14 = 6
+  val C17 = 7
+  val C20 = 8
+  val C21 = 9
+
+  def convert(src_path: String, dst_path: String, is_train: Boolean, sc: SparkContext) {
+//    println("src path = " + src_path)
+    val rawSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + "/" + src_path, 4)
+    val srcLines = Common.dropHeader(rawSrcLines)
+      .map {
+        line =>
+          val row = line.split(",")
+//          println("row length = " + row.length)
+          row
+      }
     
+    srcLines.cache
+    val ids = srcLines.map {
+      row => 
+        row(0)
+    }
+    Common.writeOut(Array[String](), ids.collect, dst_path + "_headers")
 
-  val conf = new Configuration()
-//  val hdfsCoreSitePath = new Path("core-site.xml")
-//  conf.addResource(hdfsCoreSitePath)
-  val fs = FileSystem.get(conf);
-  
+    val convertedLines = srcLines.map {
+      row =>
+        var i = 1
+        val feats = new ArrayBuffer[String]()
 
-val fields = Array("pub_id","pub_domain","pub_category","banner_pos","device_model","device_conn_type","C14","C17","C20","C21")
+        for (field <- fields) {
+          feats.append(i + ":" + tf.indexOf(field + "-" + row(GenData.newFieldMap(field))) + "")
+          i += 1
+        }
+        val hour = row(Common.hour)
+        val hourString = "hour-" + hour.substring(hour.length - 2)
+        feats.append(i + ":" + tf.indexOf(hourString) + "")
+        i += 1
 
-def convert(src_path : String, dst_path : String, is_train : Boolean){
-    /*with open(dst_path, 'w') as f:
-        for row in csv.DictReader(open(src_path)):
-            
-            feats = []
+        if (row(GenData.device_ip_count).toInt > 1000) {
+          feats.append(i + ":" + tf.indexOf("device_ip-" + row(GenData.device_ip)) + "")
+        } else {
+          feats.append(i + ":" + tf.indexOf("device_ip-less-" + row(GenData.device_ip_count)) + "")
+        }
+        i += 1
 
-            for field in fields:
-                feats.append(hashstr(field+'-'+row[field]))
-            feats.append(hashstr('hour-'+row['hour'][-2:]))
+        if (row(GenData.device_id_count).toInt > 1000) {
+          feats.append(i + ":" + tf.indexOf("device_id-" + row(GenData.device_id)) + "")
+        } else {
+          feats.append(i + ":" + tf.indexOf("device_id-less-" + row(GenData.device_id_count)) + "")
+        }
+       i += 1
 
-            if int(row['device_ip_count']) > 1000:
-                feats.append(hashstr('device_ip-'+row['device_ip']))
-            else:
-                feats.append(hashstr('device_ip-less-'+row['device_ip_count']))
+        if (row(GenData.smooth_user_hour_count).toInt > 30) {
+          feats.append(i + ":" + tf.indexOf("smooth_user_hour_count-0") + "")
+        } else {
+          feats.append(i + ":" + tf.indexOf("smooth_user_hour_count-" + row(GenData.smooth_user_hour_count)) + "")
+        }
+       i += 1
 
-            if int(row['device_id_count']) > 1000:
-                feats.append(hashstr('device_id-'+row['device_id']))
-            else:
-                feats.append(hashstr('device_id-less-'+row['device_id_count']))
+        if (row(GenData.user_count).toInt > 30) {
+          feats.append(i + ":" + tf.indexOf("user_click_histroy-" + row(GenData.user_count)) + "")
+        } else {
+          feats.append(i + ":" + tf.indexOf("user_click_histroy-" + row(GenData.user_count) + "-" + getUserClicks(row)) + "")
+        }
+       i += 1
 
-            if int(row['smooth_user_hour_count']) > 30:
-                feats.append(hashstr('smooth_user_hour_count-0'))
-            else:
-                feats.append(hashstr('smooth_user_hour_count-'+row['smooth_user_hour_count']))
+        row(GenData.click) + " " + feats.toArray.mkString(" ")
+    }
 
-            if int(row['user_count']) > 30:
-                feats.append(hashstr('user_click_histroy-'+row['user_count']))
-            else:
-                feats.append(hashstr('user_click_histroy-'+row['user_count']+'-'+row['user_click_histroy']))
+    Common.writeOut(Array[String](), convertedLines.collect, dst_path)
+  }
 
-            f.write('{0} {1} {2}\n'.format(row['id'], row['click'], ' '.join(feats)))*/
-}
-
+  def getUserClicks(row: Array[String]) {
+    if (row.length == 20) {
+      row(GenData.user_click_history)
+    } else {
+      ""
+    }
+  }
 
   def main(args: Array[String]): Unit = {
-//      if (args.size == 1){
-//            args.append("-h")
-//      }
-    val trSrcPath = args(0)
-    val trDstPath = args(1)
-    val vaSrcPath = args(2)
+    val sparkConf = new SparkConf().setAppName("Converter 2")
+      .setMaster("local[4]") // comment out when submitting to spark cluster
+
+    val sc = new SparkContext(sparkConf)
+
+    val trSrcPath = args(0)    // tr.r{size}.{category}.new.csv
+    val vaSrcPath = args(1)
+    val trDstPath = args(2)    // tr.r{size}.{category}.sp
     val vaDstPath = args(3)
-      convert(trSrcPath, trDstPath, true)
-      convert(vaSrcPath, vaDstPath, false)
+    convert(trSrcPath, trDstPath, true, sc)
+    convert(vaSrcPath, vaDstPath, false, sc)
 
   }
-  
 }

@@ -1,6 +1,12 @@
 package org.ocspark.avazu.base.converter
 
 import java.security.MessageDigest
+import org.apache.spark.rdd.RDD
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.FileSystem
+import java.math.BigInteger
+import java.util.Properties
+import org.apache.hadoop.conf.Configuration
 
 object Common {
   val app_selector = "85f751fd"
@@ -32,15 +38,26 @@ object Common {
   // "id", "click", "hour", "banner_pos", "device_id", "device_ip", "device_model", "device_conn_type", "C14", "C17", "C20", "C21"
   val fieldMap = Map("id" -> 0, "click" -> 1, "hour" -> 2, "banner_pos" -> 4, "device_id" -> 11, "device_ip" -> 12, "device_model" -> 13, "device_conn_type" -> 15, "C14" -> 16, "C17" -> 19, "C20" -> 22, "C21" -> 23)
 
-  val NR_BINS = 1000000
+  val (hdfsHost) =
+    try {
+      val prop = new Properties()
+      val is = this.getClass().getClassLoader()
+        .getResourceAsStream("config.properties");
+      prop.load(is)
 
-  def hashstr(input: String) {
-    val utfInput = scala.io.Source.fromBytes(input.getBytes(), "URF-8").toString
-    val md5Input = MessageDigest.getInstance("MD5").digest(utfInput.getBytes).toString()
-    val intInput = Integer.parseInt(md5Input)
-    (intInput % (NR_BINS - 1) + 1).toString
-  }
+      (
+        prop.getProperty("hdfs.host"))
+    } catch {
+      case e: Exception =>
+        e.printStackTrace()
+        sys.exit(1)
+    }
 
+  val conf = new Configuration()
+  val hdfsCoreSitePath = new Path("core-site.xml")
+  conf.addResource(hdfsCoreSitePath)
+  val fs = FileSystem.get(conf);
+  
   def open_with_first_line_skipped(path: String, skip: Boolean) {
     //    f = open(path)
     //    if not skip:
@@ -169,4 +186,27 @@ object Common {
 
     (greater_day - smaller_day) * 24 + (greater_hour - smaller_hour)
   }
+  
+   def dropHeader(data: RDD[String]): RDD[String] = {
+    data.mapPartitionsWithIndex((idx, lines) => {
+      if (idx == 0) {
+        lines.drop(1)
+      }
+      lines
+    })
+  }
+   
+  def writeOut(header : Array[String], newRows: Array[String], dst_path : String) {
+    println("dest file = " + dst_path)
+    val path = new Path("/" + dst_path)
+    val os = fs.create(path)
+    if (header.length > 0){    // if header exists
+      os.write((header.mkString(",") + "\n").getBytes())
+    }
+    for (row <- newRows){
+      os.write((row.mkString("") + "\n").getBytes())
+    }
+    os.close()
+  }
+
 }
