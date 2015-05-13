@@ -69,30 +69,29 @@ object GenData {
   
   def run(trSrcPath : String, vaSrcPath : String, trAppDstPath : String, vaAppDstPath : String, trSiteDstPath : String, vaSiteDstPath : String, sc : SparkContext){
 
-    val trRawSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + "/" + trSrcPath, 4)
-    val trSrcLines = Common.dropHeader(trRawSrcLines)
-//    .filter(line => !isHeader(line))
+    val trSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + trSrcPath, 4)
+    .mapPartitionsWithIndex { (idx, iter) => if (idx == 0) iter.drop(1) else iter }
     .map { 
       line => 
         val row = line.split(",")
         row
     }
+    .cache
     
-    trSrcLines.cache
     val tr_device_id_count = keyCount(trSrcLines, Common.device_id)
     val tr_device_ip_count = keyCount(trSrcLines, Common.device_ip)
     val tr_user_count = userCount(trSrcLines)
     val tr_user_hour_count = userHourCount(trSrcLines)
 
-    val vaRawSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + "/" + vaSrcPath, 4)
-    val vaSrcLines = Common.dropHeader(vaRawSrcLines)
-//    .filter(line => !isHeader(line))
+    val vaSrcLines = sc.textFile("hdfs://" + Common.hdfsHost + vaSrcPath, 4)
+    .mapPartitionsWithIndex { (idx, iter) => if (idx == 0) iter.drop(1) else iter }
     .map { 
       line => 
         val row = line.split(",")
         row
     }
-    vaSrcLines.cache
+    .cache
+    
     val va_device_id_count = keyCount(vaSrcLines, Common.device_id)
     val device_id_count = tr_device_id_count.union(va_device_id_count).reduceByKey(_+_).collect.toMap
 
