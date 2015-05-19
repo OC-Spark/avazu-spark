@@ -5,12 +5,12 @@ import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import javax.rmi.CORBA.GetORBPropertiesFileAction
-import org.ocspark.avazu.base.converter.Common
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.FileSystem
 import org.apache.spark.rdd.RDD
 import org.apache.spark.broadcast.Broadcast
+import org.ocspark.avazu.Common
 
 object GenData {
   val id = 0

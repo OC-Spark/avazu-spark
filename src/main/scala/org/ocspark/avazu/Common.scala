@@ -1,12 +1,11 @@
-package org.ocspark.avazu.base.converter
-
-import java.security.MessageDigest
+package org.ocspark.avazu
 import org.apache.spark.rdd.RDD
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.FileSystem
-import java.math.BigInteger
 import java.util.Properties
 import org.apache.hadoop.conf.Configuration
+import org.apache.spark.mllib.regression.LabeledPoint
+import scala.beans.BeanInfo
 
 object Common {
   val app_selector = "85f751fd"
@@ -34,8 +33,7 @@ object Common {
   val C19 = 21
   val C20 = 22
   val C21 = 23
-  //import hashlib, csv, math, os, subprocess
-  // "id", "click", "hour", "banner_pos", "device_id", "device_ip", "device_model", "device_conn_type", "C14", "C17", "C20", "C21"
+
   val fieldMap = Map("id" -> 0, "click" -> 1, "hour" -> 2, "banner_pos" -> 4, "device_id" -> 11, "device_ip" -> 12, "device_model" -> 13, "device_conn_type" -> 15, "C14" -> 16, "C17" -> 19, "C20" -> 22, "C21" -> 23)
 
   val (hdfsHost) =
@@ -57,82 +55,6 @@ object Common {
   val hdfsCoreSitePath = new Path("core-site.xml")
   conf.addResource(hdfsCoreSitePath)
   val fs = FileSystem.get(conf);
-  
-  def open_with_first_line_skipped(path: String, skip: Boolean) {
-    //    f = open(path)
-    //    if not skip:
-    //        return f
-    //    next(f)
-    //    return f
-    assert(false, "do not call")
-  }
-
-  def split(path: String, nr_thread: Int, has_header: Boolean) {
-
-    /*def open_with_header_witten(path: String, idx : Int, header : String){
-        f = open(path + ".__tmp__.{0}".format(idx), "w")
-        if not has_header:
-            return f 
-        f.write(header)
-        return f
-
-    def calc_nr_lines_per_thread():
-        nr_lines = int(list(subprocess.Popen("wc -l {0}".format(path), shell=True, 
-            stdout=subprocess.PIPE).stdout)[0].split()[0])
-        if not has_header:
-            nr_lines += 1 
-        return math.ceil(float(nr_lines)/nr_thread)
-
-    header = open(path).readline()
-
-    nr_lines_per_thread = calc_nr_lines_per_thread()
-
-    idx = 0
-    f = open_with_header_witten(path, idx, header)
-    for i, line in enumerate(open_with_first_line_skipped(path, has_header), start=1):
-        if i%nr_lines_per_thread == 0:
-            f.close()
-            idx += 1
-            f = open_with_header_witten(path, idx, header)
-        f.write(line)
-    f.close()*/
-    assert(false, "do not call")
-  }
-
-  def parallel_convert(cvt_path: String, arg_paths: String, nr_thread: Int) {
-
-    /*val workers = Array[String]()
-    for (i <- 0 to nr_thread - 1){
-        var cmd = "{0}".format(os.path.join(".", cvt_path))
-        for path in arg_paths:
-            cmd += " {0}".format(path+".__tmp__.{0}".format(i))
-        worker = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        workers.append(worker)
-    }
-    for (worker <- workers){
-        worker.communicate()
-    }*/
-    assert(false, "do not call")
-  }
-
-  def cat(path: String, nr_thread: Int) {
-
-    //    if os.path.exists(path):
-    //        os.remove(path)
-    //    for i in range(nr_thread):
-    //        cmd = "cat {svm}.__tmp__.{idx} >> {svm}".format(svm=path, idx=i)
-    //        p = subprocess.Popen(cmd, shell=True)
-    //        p.communicate()
-    assert(false, "do not call")
-  }
-
-  def delete(path: String, nr_thread: Int) {
-
-    //    for (i <- range(nr_thread)){
-    //        os.remove("{0}.__tmp__.{1}".format(path, i))
-    //    }
-    assert(false, "do not call")
-  }
 
   def def_user(row: Array[String]): String = {
     var user = ""
@@ -186,19 +108,10 @@ object Common {
 
     (greater_day - smaller_day) * 24 + (greater_hour - smaller_hour)
   }
-  
-   def dropHeader(data: RDD[String]): RDD[String] = {
-    data.mapPartitionsWithIndex((idx, lines) => {
-      if (idx == 0) {
-        lines.drop(1)
-      }
-      lines
-    })
-  }
    
   def writeOut(header : Array[String], newRows: Array[String], dst_path : String) {
     println("dest file = " + dst_path)
-    val path = new Path("/" + dst_path)
+    val path = new Path(dst_path)
     val os = fs.create(path)
     if (header.length > 0){    // if header exists
       os.write((header.mkString(",") + "\n").getBytes())
@@ -207,6 +120,63 @@ object Common {
       os.write((row.mkString("") + "\n").getBytes())
     }
     os.close()
+  }
+  
+  def writeOut(newRow: String, dst_path : String) {
+    println("dest file = " + dst_path)
+    val path = new Path(dst_path)
+    val os = fs.create(path)
+
+    os.write(newRow.getBytes())
+
+    os.close()
+  }
+  
+  def calcLogLoss(validation : RDD[LabeledPoint], prediction : RDD[Double]) : Double = {
+    val numValidation = validation.count()
+    println("prediction count = " + prediction.count)
+    println("validation count = " + validation.count)
+//    val label = validation.map(_.label)
+    val predictionAndLabel = prediction.zip(validation.map(_.label))
+    val loss = predictionAndLabel.map { case (p, l) =>			// change to log loss
+      val err = (l * math.log(p)) + (1 - l) * math.log(1 - p)
+      err 
+    }.reduce(_ + _)
+    val logloss = -1 * (loss / numValidation)
+    logloss
+  }
+  
+  def logisticFunction(x : Double) : Double = {
+    val p = 1/(1+math.exp(-x))
+    p
+  }
+  
+  def inverseLogisticFunction(p : Double) : Double = {
+    val x = math.log(p/(1-p))
+    x
+  }
+  
+    
+  def mergePredictions(itr : Iterable[Double]) : Double = {
+    var sum = 0.0
+    var total = 0
+    itr.foreach {
+      d =>
+        sum += inverseLogisticFunction(d)
+        total += 1
+    }
+    logisticFunction(sum / total)
+  }
+  
+  def genPerEventPrediction(idRDD : RDD[String], prediction : RDD[Double]) : RDD[(String, Double)] = {
+        val indexedSiteIdRDD = idRDD.zipWithIndex.map { case (v, i) => i -> v }
+    val indexedSitePrediction = prediction.zipWithIndex.map { case (v, i) => i -> v }
+    
+    val idPrediction : RDD[(String, Double)] = indexedSiteIdRDD.leftOuterJoin(indexedSitePrediction).map {
+      case (i, (v1, v2opt)) => (v1, v2opt.getOrElse(0))
+    }
+    
+    idPrediction
   }
 
 }

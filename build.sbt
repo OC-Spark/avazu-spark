@@ -8,7 +8,7 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.10.5"
 )
 
-val sparkVersion = "1.2.0"
+val sparkVersion = "1.3.0"
 val hbaseVersion = "0.98.7-hadoop2"
 val hadoopVersion = "2.4.0"
 
