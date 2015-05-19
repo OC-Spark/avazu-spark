@@ -25,4 +25,16 @@ For example, in the gen_data.py case, tr.rx.csv and va.rx.csv are input files. T
 
 These way, we can be sure to convert all files correctly. 
 
+----
+
+instructions for setting up kaggle-avazu on you Mac
+
+1. brew install gcc49
+
+2. modify all Makefiles. change two lines in each.
+
+CXX = g++-4.9
+CXXFLAGS = -Wall -Wconversion -Wa,-q -O3 -fPIC -std=c++11 -march=native -fopenmp
+
+3. python3 is required to run the python code. python3.4 comes with pip and is the easiest way to set up python dependencies properly.
 
