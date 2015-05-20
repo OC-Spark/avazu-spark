@@ -1,4 +1,4 @@
-package com.adaptivem.fm
+package org.ocsparks.fm
 
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.fs.FileSystem

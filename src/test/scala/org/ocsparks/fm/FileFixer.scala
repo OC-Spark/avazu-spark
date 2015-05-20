@@ -1,4 +1,4 @@
-package com.adaptivem.fm
+package org.ocsparks.fm
 
 import scala.io.Source
 import java.io.File
