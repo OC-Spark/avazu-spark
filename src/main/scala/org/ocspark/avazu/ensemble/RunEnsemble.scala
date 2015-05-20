@@ -11,39 +11,23 @@ object RunEnsemble {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
     
+    val size = args(0)
+    
     val sparkConf = new SparkConf().setAppName("Run Ensemble")
       .setMaster("local[4]") // comment out when submitting to spark cluster
 
     val sc = new SparkContext(sparkConf)
     
     runAll(sc)
-    ensemble()
+    ensemble(size, sc)
   }
   
   def runAll(sc : SparkContext){
     org.ocspark.avazu.ensemble.util.RunAll.run(sc)
-    /*
-    val currentDir = new File("./src/main/scala/org/ocspark/avazu/ensemble/model")
-    println("current dir = " + currentDir.getCanonicalPath())
-    val scalaIndex = currentDir.getCanonicalPath().indexOf("scala")
-    val beg = scalaIndex + "scala".length
-    val subDirs = recursiveListDirs(currentDir)
-    for ( dir <- subDirs){
-      println("sub dir = " + dir.getCanonicalPath())
-      val packageName = dir.getCanonicalPath().substring(beg)
-      println("packageName = " + packageName)
-      
-    }*/
   }
   
-  def ensemble(){
-    
+  def ensemble(size : String, sc : SparkContext){
+    org.ocspark.avazu.ensemble.util.Ensemble.run(size, sc)
   }
-  
-  /*def recursiveListDirs(f: File): Array[File] = {
-	  val subDirs = Array[File]()
-	  val these = f.listFiles
-	  subDirs ++ these.filter(_.isDirectory)
-	}*/
 
 }

@@ -9,7 +9,7 @@ object RunAll {
   }
   
   def run(sc : SparkContext){
-    
+    org.ocspark.avazu.ensemble.model.app.RunModel.run(sc)
   }
 
 }

@@ -1,9 +1,9 @@
 package org.ocspark.avazu.ensemble.model.app
 
-import org.ocspark.avazu.ensemble.model.app.util.RunTemplate
+import org.ocspark.avazu.ensemble.util.RunTemplate
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
-import org.ocspark.avazu.ensemble.model.app.util.RunTemplate
+import org.ocspark.avazu.ensemble.util.RunTemplate
 
 object RunModel {
 

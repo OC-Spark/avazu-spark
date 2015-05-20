@@ -1,6 +1,6 @@
 package org.ocspark.avazu.ensemble.util
 
-object SubSet {
+object MkPrd {
 
   def main(args: Array[String]): Unit = {}
 

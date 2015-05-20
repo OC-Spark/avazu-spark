@@ -1,7 +1,10 @@
-package org.ocspark.avazu.ensemble.model.app.util
+package org.ocspark.avazu.ensemble.util
 
 import org.apache.spark.SparkConf
+import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext
+
 import scopt.OptionParser
 
 object RunTemplate {
@@ -12,9 +15,9 @@ object RunTemplate {
 
     val sc = new SparkContext(sparkConf)
 
-    val defaultParams = AppRunTemplateParams()
+    val defaultParams = RunTemplateParams()
 
-    val parser = new OptionParser[AppRunTemplateParams]("SparseNaiveBayes") {
+    val parser = new OptionParser[RunTemplateParams]("SparseNaiveBayes") {
       head("SparseNaiveBayes: an example naive Bayes app for LIBSVM data.")
       opt[Double]("reg")
         .text("the index of the first column in group features ")
@@ -59,7 +62,7 @@ object RunTemplate {
   }
   
   def subset(){
-    
+    Subset.run()
   }
   
   def genData(){
