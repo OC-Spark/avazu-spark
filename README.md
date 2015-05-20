@@ -38,3 +38,8 @@ CXXFLAGS = -Wall -Wconversion -Wa,-q -O3 -fPIC -std=c++11 -march=native -fopenmp
 
 3. python3 is required to run the python code. python3.4 comes with pip and is the easiest way to set up python dependencies properly.
 
+----
+
+Spark-libFM is at
+
+https://github.com/zhengruifeng/spark-libFM.git
