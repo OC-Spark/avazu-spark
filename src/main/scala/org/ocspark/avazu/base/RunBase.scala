@@ -21,17 +21,21 @@ object RunBase {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
 
+    val sparkConf = new SparkConf().setAppName("GenData")
+      .setMaster("local[4]") // comment out when submitting to spark cluster
+
+    val sc = new SparkContext(sparkConf)
+    
+    run(sc)
+  }
+
+  def run(sc: SparkContext) {
     val trSrcPath = "/avazu/tr.rx.csv"
     val vaSrcPath = "/avazu/va.rx.csv"
     val trAppDstPath = "/avazu/base/tr.rx.app.new.csv"
     val vaAppDstPath = "/avazu/base/va.rx.app.new.csv"
     val trSiteDstPath = "/avazu/base/tr.rx.site.new.csv"
     val vaSiteDstPath = "/avazu/base/va.rx.site.new.csv"
-
-    val sparkConf = new SparkConf().setAppName("GenData")
-      .setMaster("local[4]") // comment out when submitting to spark cluster
-
-    val sc = new SparkContext(sparkConf)
 
     GenData.run(trSrcPath, vaSrcPath, trAppDstPath, vaAppDstPath, trSiteDstPath, vaSiteDstPath, sc)
 
