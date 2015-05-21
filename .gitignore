@@ -6,7 +6,6 @@ bin/
 # sbt specific
 .cache
 .history
-.lib/
 dist/*
 target/
 lib_managed/
@@ -16,7 +15,6 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 .settings/
-lib/
 src/main/resources/core-site.xml
 
 
