@@ -9,7 +9,7 @@ lazy val commonSettings = Seq(
 )
 
 val sparkVersion = "1.3.0"
-val hbaseVersion = "0.98.7-hadoop2"
+val hbaseVersion = "1.0.0"
 val hadoopVersion = "2.4.0"
 
 lazy val app = (project in file("."))
