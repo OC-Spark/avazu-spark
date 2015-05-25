@@ -133,7 +133,7 @@ object Run {
   def catSubmit(size : String, sc : SparkContext){
     val fApp = s"/avazu/bag/va.r$size.app.submit"
     val fSite = s"/avazu/bag/va.r$size.site.submit"
-    val fOut = s"/avazu/bag/bag.r$size.prd"
+    val fOut = s"/avazu/pool/bag.r$size.prd"
     
     CatSubmit.run(fApp, fSite, fOut, sc)
     

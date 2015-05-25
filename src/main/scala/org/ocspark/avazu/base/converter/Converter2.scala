@@ -6,7 +6,7 @@ import java.util.Properties
 import scala.collection.mutable.ArrayBuffer
 import scala.annotation.meta.field
 import org.apache.spark.SparkContext
-import org.ocspark.avazu.base.util.GenData
+import org.ocspark.avazu.base.util.GenBaseData
 import org.apache.spark.SparkConf
 import org.apache.hadoop.fs.Path
 import org.apache.spark.mllib.feature.HashingTF
@@ -53,37 +53,37 @@ object Converter2 {
         val feats = new ArrayBuffer[String]()
 
         for (field <- fields) {
-          feats.append(tf.indexOf(field + "-" + row(GenData.newFieldMap(field))) + "")
+          feats.append(tf.indexOf(field + "-" + row(GenBaseData.newFieldMap(field))) + "")
         }
         val hour = row(Common.hour)
         val hourString = "hour-" + hour.substring(hour.length - 2)
         feats.append(tf.indexOf(hourString) + "")
 
-        if (row(GenData.device_ip_count).toInt > 1000) {
-          feats.append(tf.indexOf("device_ip-" + row(GenData.device_ip)) + "")
+        if (row(GenBaseData.device_ip_count).toInt > 1000) {
+          feats.append(tf.indexOf("device_ip-" + row(GenBaseData.device_ip)) + "")
         } else {
-          feats.append(tf.indexOf("device_ip-less-" + row(GenData.device_ip_count)) + "")
+          feats.append(tf.indexOf("device_ip-less-" + row(GenBaseData.device_ip_count)) + "")
         }
 
-        if (row(GenData.device_id_count).toInt > 1000) {
-          feats.append(tf.indexOf("device_id-" + row(GenData.device_id)) + "")
+        if (row(GenBaseData.device_id_count).toInt > 1000) {
+          feats.append(tf.indexOf("device_id-" + row(GenBaseData.device_id)) + "")
         } else {
-          feats.append(tf.indexOf("device_id-less-" + row(GenData.device_id_count)) + "")
+          feats.append(tf.indexOf("device_id-less-" + row(GenBaseData.device_id_count)) + "")
         }
 
-        if (row(GenData.smooth_user_hour_count).toInt > 30) {
+        if (row(GenBaseData.smooth_user_hour_count).toInt > 30) {
           feats.append(tf.indexOf("smooth_user_hour_count-0") + "")
         } else {
-          feats.append(tf.indexOf("smooth_user_hour_count-" + row(GenData.smooth_user_hour_count)) + "")
+          feats.append(tf.indexOf("smooth_user_hour_count-" + row(GenBaseData.smooth_user_hour_count)) + "")
         }
 
-        if (row(GenData.user_count).toInt > 30) {
-          feats.append(tf.indexOf("user_click_histroy-" + row(GenData.user_count)) + "")
+        if (row(GenBaseData.user_count).toInt > 30) {
+          feats.append(tf.indexOf("user_click_histroy-" + row(GenBaseData.user_count)) + "")
         } else {
-          feats.append(tf.indexOf("user_click_histroy-" + row(GenData.user_count) + "-" + getUserClicks(row)) + "")
+          feats.append(tf.indexOf("user_click_histroy-" + row(GenBaseData.user_count) + "-" + getUserClicks(row)) + "")
         }
 
-        row(GenData.id) + " " + row(GenData.click) + " " + feats.toArray.mkString(" ")
+        row(GenBaseData.id) + " " + row(GenBaseData.click) + " " + feats.toArray.mkString(" ")
     }
 
     val spLineArray = convertedLines.collect
@@ -93,7 +93,7 @@ object Converter2 {
 
   def getUserClicks(row: Array[String]) {
     if (row.length == 20) {
-      row(GenData.user_click_history)
+      row(GenBaseData.user_click_history)
     } else {
       ""
     }

@@ -1,6 +1,6 @@
 package org.ocspark.avazu.base
 
-import org.ocspark.avazu.base.util.GenData
+import org.ocspark.avazu.base.util.GenBaseData
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
@@ -14,6 +14,7 @@ import org.apache.spark.mllib.regression.FMModel
 import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import org.ocspark.avazu.Common
+import scala.collection.mutable.ArrayBuffer
 
 object RunBase {
 
@@ -26,18 +27,18 @@ object RunBase {
 
     val sc = new SparkContext(sparkConf)
     
-    run(sc)
+    run("x", sc)
   }
 
-  def run(sc: SparkContext) {
-    val trSrcPath = "/avazu/tr.rx.csv"
-    val vaSrcPath = "/avazu/va.rx.csv"
-    val trAppDstPath = "/avazu/base/tr.rx.app.new.csv"
-    val vaAppDstPath = "/avazu/base/va.rx.app.new.csv"
-    val trSiteDstPath = "/avazu/base/tr.rx.site.new.csv"
-    val vaSiteDstPath = "/avazu/base/va.rx.site.new.csv"
+  def run(size : String, sc: SparkContext) {
+    val trSrcPath = s"/avazu/tr.r$size.csv"
+    val vaSrcPath = s"/avazu/va.r$size.csv"
+    val trAppDstPath = s"/avazu/base/tr.r$size.app.new.csv"
+    val vaAppDstPath = s"/avazu/base/va.r$size.app.new.csv"
+    val trSiteDstPath = s"/avazu/base/tr.r$size.site.new.csv"
+    val vaSiteDstPath = s"/avazu/base/va.r$size.site.new.csv"
 
-    GenData.run(trSrcPath, vaSrcPath, trAppDstPath, vaAppDstPath, trSiteDstPath, vaSiteDstPath, sc)
+    GenBaseData.run(trSrcPath, vaSrcPath, trAppDstPath, vaAppDstPath, trSiteDstPath, vaSiteDstPath, sc)
 
     val trAppSpPath = "/avazu/base/tr.rx.app.sp"
     val vaAppSpPath = "/avazu/base/va.rx.app.sp"
@@ -48,73 +49,76 @@ object RunBase {
     val vaSiteSpPath = "/avazu/base/va.rx.site.sp"
     Converter2.convert(trSiteDstPath, trSiteSpPath, true, sc)
     Converter2.convert(vaSiteDstPath, vaSiteSpPath, false, sc)
+    
+    val appPred_Label = predict(trAppSpPath, vaAppSpPath, sc)
+    val appIdPrediction = appPred_Label._1
+    val appValidation = appPred_Label._2
 
-    val trAppLibSVMFile = trAppSpPath + ".svm"
-    ConvertLibSVM.addOne(trAppSpPath, trAppLibSVMFile, sc)
-    val training = MLUtils.loadLibSVMFile(sc, "hdfs://localhost/" + trAppLibSVMFile).cache()
-    val trAppFm = FMWithLBFGS.train(training, task = 1, numIterations = 20, numCorrections = 5, dim = (true, true, 4), regParam = (0, 0, 0), initStd = 0.1)
-    // calc loss for training data
-
-    val vaAppLibSVMFile = vaAppSpPath + ".svm"
-    ConvertLibSVM.addOne(vaAppSpPath, vaAppLibSVMFile, sc)
-    // do prediction and calc loss
-    val appValidation = MLUtils.loadLibSVMFile(sc, vaAppLibSVMFile).cache()
-    //    println("app validation count = " + appValidation.count)
-    //    validation.cache
-    val appPrediction = trAppFm.predict(appValidation.map(_.features))
-    //    println("app prediction count = " + appPrediction.count)
-    val appIdRDD = sc.textFile(vaAppSpPath, 4).map {
-      line =>
-        val id = line.split(" ", 2)
-        id(0)
+    val sitePred_label = predict(trSiteSpPath, vaSiteSpPath, sc)
+    val siteIdPrediction = sitePred_label._1
+    
+    // merge results 
+    val mergedIdPredictions = siteIdPrediction.union(appIdPrediction)
+      .groupByKey()
+      .map {
+        id_prediction =>
+          val id = id_prediction._1
+          val merged = Common.mergePredictions(id_prediction._2)
+//          println("merged ="+ merged)
+          (id, merged)
+      }
+    mergedIdPredictions.cache
+    val idPredictionArray = ArrayBuffer[String]()
+    mergedIdPredictions.collect.foreach {
+      idPrediction =>
+        idPredictionArray.append(idPrediction._1 + "," + idPrediction._2)
     }
-    val appIdPrediction = Common.genPerEventPrediction(appIdRDD, appPrediction)
+    Common.writeOut(idPredictionArray.toArray.mkString("\n"), s"/avazu/pool/base.r$size.prd")
+    
+    val mergedPredictions = mergedIdPredictions.map {
+      id_prediction =>
+        val prediction = id_prediction._2
+        prediction
+    }
 
-    val logLoss = Common.calcLogLoss(appValidation, appPrediction)
-    println("app validation logloss = " + logLoss)
+    val siteValidation = sitePred_label._2
+    val validationCount = siteValidation.count
+    val mergedPredictionCount = mergedPredictions.count
+    println("merged prediction count = " + mergedPredictionCount)
+    
+    if (validationCount == mergedPredictionCount) {
+      val mergedLogLoss = Common.calcLogLoss(siteValidation, mergedPredictions)
+    } else {
+      println("Redundant ad id's exist!")		// bad test data set was used in avazu 
+    }
 
-    ConvertLibSVM.addOne(trSiteSpPath, trSiteSpPath + ".svm", sc)
-    val trSite = MLUtils.loadLibSVMFile(sc, "hdfs://localhost/" + trSiteSpPath + ".svm").cache()
+  }
+  
+  def predict(trSpPath : String, vaSpPath : String, sc : SparkContext) : (RDD[(String, Double)], RDD[LabeledPoint]) = {
+    ConvertLibSVM.addOne(trSpPath, trSpPath + ".svm", sc)		// append :1 behind each index
+    val trSite = MLUtils.loadLibSVMFile(sc, "hdfs://localhost/" + trSpPath + ".svm").cache()
     val trSiteFm = FMWithLBFGS.train(trSite, task = 1, numIterations = 20, numCorrections = 5, dim = (true, true, 4), regParam = (0, 0, 0), initStd = 0.1)
 
-    val vaSiteLibSVMFile = vaSiteSpPath + ".svm"
-    ConvertLibSVM.addOne(vaSiteSpPath, vaSiteLibSVMFile, sc)
+    val vaSiteLibSVMFile = vaSpPath + ".svm"
+    ConvertLibSVM.addOne(vaSpPath, vaSiteLibSVMFile, sc)
 
-    val siteValidation = MLUtils.loadLibSVMFile(sc, vaSiteLibSVMFile).cache()
+    val validation = MLUtils.loadLibSVMFile(sc, vaSiteLibSVMFile).cache()
     //    println("site validation count = " + siteValidation.count)
-    val sitePrediction = trSiteFm.predict(siteValidation.map(_.features))
+    val sitePrediction = trSiteFm.predict(validation.map(_.features))
     //    println("site prediction count = " + sitePrediction.count)
 
-    val siteLogLoss = Common.calcLogLoss(siteValidation, sitePrediction)
+    val logLoss = Common.calcLogLoss(validation, sitePrediction)
     println("site validation logloss = " + logLoss)
 
-    val siteIdRDD = sc.textFile(vaSiteSpPath, 4).map {
+    val idRDD = sc.textFile(vaSpPath, 4).map {
       line =>
         val id = line.split(" ", 2)
         id(0)
     }
     // merge results 
-    val siteIdPrediction = Common.genPerEventPrediction(siteIdRDD, sitePrediction)
-    val mergedPrediction = siteIdPrediction.union(appIdPrediction)
-      .groupByKey()
-      .map {
-        predictions =>
-          val merged = Common.mergePredictions(predictions._2)
-          merged
-      }
-    mergedPrediction.cache
-    println("merged prediction count = " + mergedPrediction.count)
-
-    val unionedValidation = siteValidation.union(appValidation)
-    val validationCount = unionedValidation.count
-    val mergedPredictionCount = mergedPrediction.count
-    if (validationCount == mergedPredictionCount) {
-      val mergedLogLoss = Common.calcLogLoss(unionedValidation, mergedPrediction)
-      println("site prediction count = " + sitePrediction.count)
-    } else {
-      println("Redundant ad id's exist!")
-    }
-
+    val idPrediction = Common.genPerEventPrediction(idRDD, sitePrediction)
+    
+    (idPrediction, validation)
   }
 
 }

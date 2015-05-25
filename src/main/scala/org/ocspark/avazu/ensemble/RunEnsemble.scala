@@ -18,12 +18,12 @@ object RunEnsemble {
 
     val sc = new SparkContext(sparkConf)
     
-    runAll(sc)
+    runAll(size, sc)
     ensemble(size, sc)
   }
   
-  def runAll(sc : SparkContext){
-    org.ocspark.avazu.ensemble.util.RunAll.run(sc)
+  def runAll(size : String, sc : SparkContext){
+    org.ocspark.avazu.ensemble.util.RunAll.run(size, sc)
   }
   
   def ensemble(size : String, sc : SparkContext){

@@ -18,7 +18,7 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.Row
 import scala.collection.mutable.ArrayBuffer
 import org.apache.spark.rdd.RDD
-import org.ocspark.avazu.base.util.GenData
+import org.ocspark.avazu.base.util.GenBaseData
 import org.apache.spark.sql.DataFrame
 import scala.collection.mutable.HashMap
 import org.apache.spark.sql.GroupedData
@@ -111,7 +111,7 @@ object Group6 {
                 val vtAb = new ArrayBuffer[String]()
                 vIterable.foreach {
                   row =>
-                    val v = row(GenData.newFieldMap(c))
+                    val v = row(GenBaseData.newFieldMap(c))
                     val vtString = vtform(v.toString, partition, c, groupCounts, max_occur)
                     vtAb.append(vtString)
                 }
@@ -151,7 +151,7 @@ object Group6 {
             val gf_str = gf_strs.toArray.mkString(" ")
             vIterable.foreach {
               row =>
-                val rowId = row(GenData.newFieldMap("id"))
+                val rowId = row(GenBaseData.newFieldMap("id"))
                 val feats_str = rowId + gf_str
                 if (row(srcIndex) == "train") {
                   train_feats_str.append(feats_str)
@@ -171,13 +171,13 @@ object Group6 {
     var kid = ""
     if (g_field != "device_id") {
       val kidWords = new ArrayBuffer[String]()
-      g_field.split(",").foreach(w => kidWords.append(words(GenData.newFieldMap(w))))
+      g_field.split(",").foreach(w => kidWords.append(words(GenBaseData.newFieldMap(w))))
       kid = kidWords.toArray.mkString("-")
     } else {
-      if (words(GenData.newFieldMap("device_id")) != "a99f214a") {
-        kid = words(GenData.newFieldMap("device_id"))
+      if (words(GenBaseData.newFieldMap("device_id")) != "a99f214a") {
+        kid = words(GenBaseData.newFieldMap("device_id"))
       } else {
-        kid = words(GenData.newFieldMap("device_ip")) + "-" + words(GenData.newFieldMap("device_model"))
+        kid = words(GenBaseData.newFieldMap("device_ip")) + "-" + words(GenBaseData.newFieldMap("device_model"))
       }
     }
     //    println("kid = " + kid)
@@ -187,7 +187,7 @@ object Group6 {
   def get_pid_table(wordsRdd: RDD[Array[String]], col: String, sz_chunk: Long, kidIndex: Int): collection.mutable.Map[String, Int] = {
     //    wordsRdd.collect.foreach(l => println(l.length))
     val ccMap = new collection.mutable.HashMap[String, Int]()
-    val idIndex = GenData.newFieldMap("id")
+    val idIndex = GenBaseData.newFieldMap("id")
     wordsRdd.map {
       words =>
         //        println("words length = " + words.length)
@@ -311,7 +311,7 @@ object Group6 {
     val ccMap = get_pid_table(trva1, "__kid__", sz_chunk, kidIndex)
     val trva2: RDD[Array[String]] = trva1.map {
       words =>
-        val idVal = words(GenData.newFieldMap("id"))
+        val idVal = words(GenBaseData.newFieldMap("id"))
         val cc = ccMap.getOrElse(idVal, 0)
         words ++ Array(cc + "")
     }

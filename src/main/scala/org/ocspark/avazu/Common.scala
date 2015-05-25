@@ -1,11 +1,14 @@
 package org.ocspark.avazu
-import org.apache.spark.rdd.RDD
-import org.apache.hadoop.fs.Path
-import org.apache.hadoop.fs.FileSystem
+
 import java.util.Properties
-import org.apache.hadoop.conf.Configuration
-import org.apache.spark.mllib.regression.LabeledPoint
+
 import scala.beans.BeanInfo
+
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.fs.FileSystem
+import org.apache.hadoop.fs.Path
+import org.apache.spark.mllib.regression.LabeledPoint
+import org.apache.spark.rdd.RDD
 
 object Common {
   val app_selector = "85f751fd"
@@ -56,7 +59,7 @@ object Common {
   conf.addResource(hdfsCoreSitePath)
   val fs = FileSystem.get(conf);
 
-  def def_user(row: Array[String]): String = {
+  def defUser(row: Array[String]): String = {
     var user = ""
     if (row(device_id) == "a99f214a") {		// deviceId
       user = "ip-" + row(device_ip) + "-" + row(device_model)
@@ -132,6 +135,11 @@ object Common {
     os.close()
   }
   
+  def createDir(model : String){
+    val path = new Path(s"/avazu/ensemble/$model")
+    fs.mkdirs(path)
+  }
+  
   def calcLogLoss(validation : RDD[LabeledPoint], prediction : RDD[Double]) : Double = {
     val numValidation = validation.count()
     println("prediction count = " + prediction.count)
@@ -152,7 +160,9 @@ object Common {
   }
   
   def inverseLogisticFunction(p : Double) : Double = {
+//    print("input p =  " + p + "-")
     val x = math.log(p/(1-p))
+//    println("inverted x = " + x)
     x
   }
   
@@ -165,6 +175,7 @@ object Common {
         sum += inverseLogisticFunction(d)
         total += 1
     }
+//    println("sum="+sum +"-" + "total=" +total)
     logisticFunction(sum / total)
   }
   
@@ -177,6 +188,17 @@ object Common {
     }
     
     idPrediction
+  }
+  
+  def averagePrd(list : Iterable[Double]) : Double = {
+    var sum = 0.0
+    var total = 0
+    for (d <- list){
+      sum += inverseLogisticFunction(d)
+      total += 1
+    }
+//    println("sum = " + sum)
+    logisticFunction(sum / total)
   }
 
 }

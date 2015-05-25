@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext
 import scala.collection.mutable.ArrayBuffer
 import scala.annotation.meta.field
 import org.apache.spark.mllib.feature.HashingTF
-import org.ocspark.avazu.base.util.GenData
+import org.ocspark.avazu.base.util.GenBaseData
 import org.ocspark.avazu.Common
 
 object Converter6 {
@@ -47,55 +47,55 @@ object Converter6 {
         for (field <- fields) {
 //          println("convert6 : field = " + field)
 //          println("field index = " + GenData.newFieldMap(field))
-          val v = tf.indexOf(field + "-" + row(GenData.newFieldMap(field)))
+          val v = tf.indexOf(field + "-" + row(GenBaseData.newFieldMap(field)))
 //          val feat = f"$i:$v:$w%.20f"
           feats.append(f"$i:$v:$w%.20f")
           i += 1
         }
-        val hour = row(GenData.newFieldMap("hour"))
+        val hour = row(GenBaseData.newFieldMap("hour"))
         var v = tf.indexOf("hour-" + hour.substring(hour.length - 2))
         feats.append(f"$i:$v:$w%.20f")
         i += 1
 
-        if (row(GenData.newFieldMap("device_ip_count")).toInt > 1000) {
-          v = tf.indexOf("device_ip-" + row(GenData.newFieldMap("device_ip")))
+        if (row(GenBaseData.newFieldMap("device_ip_count")).toInt > 1000) {
+          v = tf.indexOf("device_ip-" + row(GenBaseData.newFieldMap("device_ip")))
           feats.append(f"$i:$v:$w%.20f")
         } else {
-          v = tf.indexOf("device_ip-less-" + row(GenData.newFieldMap("device_ip_count")))
+          v = tf.indexOf("device_ip-less-" + row(GenBaseData.newFieldMap("device_ip_count")))
           feats.append(f"$i:$v:$w%.20f")
         }
         i += 1
 
-        if (row(GenData.newFieldMap("device_id_count")).toInt > 1000) {
-          v = tf.indexOf("device_id-" + row(GenData.newFieldMap("device_id")))
+        if (row(GenBaseData.newFieldMap("device_id_count")).toInt > 1000) {
+          v = tf.indexOf("device_id-" + row(GenBaseData.newFieldMap("device_id")))
           feats.append(f"$i:$v:$w%.20f")
         } else {
-          v = tf.indexOf("device_id-less-" + row(GenData.newFieldMap("device_id_count")))
+          v = tf.indexOf("device_id-less-" + row(GenBaseData.newFieldMap("device_id_count")))
           feats.append(f"$i:$v:$w%.20f")
         }
         i += 1
 
-        if (row(GenData.newFieldMap("smooth_user_hour_count")).toInt > 30) {
+        if (row(GenBaseData.newFieldMap("smooth_user_hour_count")).toInt > 30) {
           v = tf.indexOf("smooth_user_hour_count-0")
           feats.append(f"$i:$v:$w%.20f")
         } else {
-          v = tf.indexOf("smooth_user_hour_count-" + row(GenData.newFieldMap("smooth_user_hour_count")))
+          v = tf.indexOf("smooth_user_hour_count-" + row(GenBaseData.newFieldMap("smooth_user_hour_count")))
           feats.append(f"$i:$v:$w%.20f")
         }
         i += 1
 
-        if (row(GenData.newFieldMap("user_count")).toInt > 30) {
-          v = tf.indexOf("user_click_histroy-" + row(GenData.newFieldMap("user_count")))
+        if (row(GenBaseData.newFieldMap("user_count")).toInt > 30) {
+          v = tf.indexOf("user_click_histroy-" + row(GenBaseData.newFieldMap("user_count")))
           feats.append(f"$i:$v:$w%.20f")
         } else {
-          v = tf.indexOf("user_click_histroy-" + row(GenData.newFieldMap("user_count")) + "-" + row(GenData.newFieldMap("user_click_history")))
+          v = tf.indexOf("user_click_histroy-" + row(GenBaseData.newFieldMap("user_count")) + "-" + row(GenBaseData.newFieldMap("user_click_history")))
           feats.append(f"$i:$v:$w%.20f")
         }
         i += 1
 
-        val outputString = "%s %s %s".format(row(GenData.newFieldMap("id")), row(GenData.newFieldMap("click")), feats.mkString(" "))
+        val outputString = "%s %s %s".format(row(GenBaseData.newFieldMap("id")), row(GenBaseData.newFieldMap("click")), feats.mkString(" "))
 //        println("outputString = " + outputString)
-        "%s %s %s".format(row(GenData.newFieldMap("id")), row(GenData.newFieldMap("click")), feats.mkString(" "))
+        "%s %s %s".format(row(GenBaseData.newFieldMap("id")), row(GenBaseData.newFieldMap("click")), feats.mkString(" "))
     }
 
     Common.writeOut(Array[String](), output.collect, dst_path)

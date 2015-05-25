@@ -19,7 +19,7 @@ object ConvertLibSVM {
     addOne(input, output, sc)
   }
   
-  def addOne(input : String, output : String, sc : SparkContext){
+  def addOne(input : String, output : String, sc : SparkContext) : Int = {
     
     val inputRDD = sc.textFile("hdfs://" + Common.hdfsHost + "/" + input, 4)
     
@@ -42,8 +42,10 @@ object ConvertLibSVM {
       }
       sb.toString
     }
+    val outputArray = outputRDD.collect
+    Common.writeOut(Array[String](), outputArray, output)
     
-    Common.writeOut(Array[String](), outputRDD.collect, output)
+    outputArray.size
     
   }
   
