@@ -11,7 +11,7 @@ object RunAll {
     Logger.getLogger("org").setLevel(Level.WARN)
     Logger.getLogger("akka").setLevel(Level.WARN)
 
-    val sparkConf = new SparkConf().setAppName("GenData")
+    val sparkConf = new SparkConf().setAppName("Ensemble Run All")
       .setMaster("local[4]") // comment out when submitting to spark cluster
 
     val sc = new SparkContext(sparkConf)

@@ -17,7 +17,7 @@ import org.ocspark.avazu.Common
 import org.ocspark.avazu.bag.util.CatId
 import org.ocspark.avazu.bag.util.CatSubmit
 
-object Run {
+object RunBag {
 
   def main(args: Array[String]): Unit = {
     val size = args(0)
